@@ -35,6 +35,7 @@ def compute(rows, p):
     """rows: dicts with name, fields, paintings, robot_spray_min, robot_total_min, robot_gallons, manual_hours.
     p: wage, crew, manual_paint_price, paint_mult, robot_paint_price, time_factor, pays_rate, install_fee,
        season_months, purchase_price."""
+    wage = 0.0 if p.get("volunteer") else p["wage"]
     detail = []
     t = dict.fromkeys(["jobs", "manual_hours", "robot_hours", "manual_cost", "robot_cost", "spray_hours",
                        "manual_paint", "robot_paint"], 0.0)
@@ -49,7 +50,7 @@ def compute(rows, p):
         d = {"name": r["name"], "fields": r["fields"], "paintings": r["paintings"], "jobs": jobs,
              "how_often": r.get("how_often", ""),
              "manual_hours": m_hours, "robot_hours": r_hours,
-             "manual_cost": m_hours * p["wage"] + m_paint, "robot_cost": r_hours * p["wage"] + r_paint,
+             "manual_cost": m_hours * wage + m_paint, "robot_cost": r_hours * wage + r_paint,
              "spray_hours": jobs * r["robot_spray_min"] / 60, "manual_paint": m_paint, "robot_paint": r_paint}
         detail.append(d)
         for k in t:
@@ -73,6 +74,40 @@ def compute(rows, p):
         "pays_to_price_months": price / pays_usage * 12 if price > 0 and pays_usage > 0 else None,
     }
     return out
+
+
+def _span(months):
+    if months < 12:
+        return f"about {max(1, round(months))} months"
+    years = round(months / 12 * 2) / 2
+    return f"about {years:g} year{'s' if years != 1 else ''} ({round(months)} months)"
+
+
+def roi_timeline(res, p, for_prospect=False):
+    """Plain-language payback lines for buying and for Pay As You Spray."""
+    lines = []
+    price = p["purchase_price"]
+    if price > 0:
+        if res["save_owned"] > 0:
+            def ahead(years):
+                net = res["save_owned"] * years - price
+                return f"about {money(abs(net))} {'ahead' if net >= 0 else 'short'}"
+            line = (f"Buying: the robot pays for itself in {_span(res['payback_months'])}, then saves about "
+                    f"{money(res['save_owned'])} a year. After 3 years: {ahead(3)}. After 5 years: {ahead(5)}.")
+            if res["payback_months"] > 60 and not for_prospect:
+                line += " On cost alone that's slow, so lead with the hours saved."
+            lines.append(line)
+        else:
+            lines.append("Buying: on cost alone this doesn't pay back, because the robot's paint and time cost about "
+                         "the same as today. The case here is hours saved and line quality.")
+    monthly = res["save_pays"] / 12
+    if res["save_pays"] > 0:
+        lines.append(f"Pay As You Spray: the {money(p['install_fee'])} installation is covered in "
+                     f"{_span(p['install_fee'] / monthly)}, then about {money(res['save_pays'])} a year ahead.")
+    else:
+        lines.append(f"Pay As You Spray: usage fees cost about {money(-res['save_pays'])} a year more than today, so "
+                     f"it's best as a low-risk trial before buying.")
+    return lines
 
 
 # ---------------------------------------------------------------- PDF
@@ -125,9 +160,10 @@ def build_pdf(res, p, prospect, model_label, rep):
                  f"with a {model_label}", 10.5, MUTED), Spacer(1, 14)]
 
     third = res["payback_months"]
-    stats = [(f"{res['hours_saved']:,.0f}", "crew hours saved per year"),
+    who = "volunteer" if p.get("volunteer") else "crew"
+    stats = [(f"{res['hours_saved']:,.0f}", f"{who} hours saved per year"),  # noqa
              (money(res["save_owned"]), "saved per year with your own robot"),
-             (f"{third:.0f} months" if third else money(res["pays_monthly"]) + "/mo",
+             (_span(third).replace("about ", "").split(" (")[0] if third else money(res["pays_monthly"]) + "/mo",
               "to pay back the purchase" if third else "average Pay As You Spray usage fee")]
     cells = [[_p(v, 22, GREEN, True, 1, 26), _p(l, 8.5, MUTED, align=1)] for v, l in stats]
     st_tbl = Table([cells], colWidths=[W / 3] * 3)
@@ -138,7 +174,7 @@ def build_pdf(res, p, prospect, model_label, rep):
 
     story.append(_p("Your fields, manual painting vs. robot", 11.5, GREEN, True))
     story.append(Spacer(1, 5))
-    data = [["Field type", "Fields", "How often", "Markings\nper year", "Crew hours\nby hand", "Hours\nwith robot",
+    data = [["Field type", "Fields", "How often", "Markings\nper year", "Hours\nby hand", "Hours\nwith robot",
              "Cost\nby hand", "Cost\nwith robot"]]
     for d in res["detail"]:
         data.append([d["name"], f"{d['fields']}", d["how_often"], f"{d['jobs']:,.0f}", f"{d['manual_hours']:,.0f}",
@@ -163,7 +199,7 @@ def build_pdf(res, p, prospect, model_label, rep):
     buy_rows += [("Yearly paint and labor", money(res["owned_annual"])),
                  ("Savings per year vs. today", money(res["save_owned"]))]
     if res["payback_months"]:
-        buy_rows += [("Payback", f"{res['payback_months']:.0f} months"),
+        buy_rows += [("Payback", _span(res["payback_months"]).replace("about ", "")),
                      ("Net savings over 3 years", money(res["three_year_owned"]))]
     pays = [_p("Pay As You Spray", 11.5, GREEN, True), Spacer(1, 4)]
     pays_rows = [("One-time installation", money(p["install_fee"])),
@@ -187,7 +223,13 @@ def build_pdf(res, p, prospect, model_label, rep):
                               ("BOX", (1, 0), (1, 0), 1, RULE), ("LEFTPADDING", (0, 0), (-1, -1), 12),
                               ("RIGHTPADDING", (0, 0), (-1, -1), 12), ("TOPPADDING", (0, 0), (-1, -1), 10),
                               ("BOTTOMPADDING", (0, 0), (-1, -1), 12)]))
-    story += [opts, Spacer(1, 14)]
+    story += [opts, Spacer(1, 12)]
+    story.append(_p("Rough ROI timeline", 11.5, GREEN, True))
+    story.append(Spacer(1, 3))
+    for line in roi_timeline(res, p, for_prospect=True):
+        story.append(_p("&bull; " + line, 9, INK, leading=12.5))
+        story.append(Spacer(1, 2))
+    story.append(Spacer(1, 8))
 
     note = Table([[_p("<b>This is a rough estimate, not a quote.</b> It uses typical numbers to show the size of "
                       "the savings. Your actual costs depend on your fields, crew, weather and paint, and your price "
@@ -197,10 +239,13 @@ def build_pdf(res, p, prospect, model_label, rep):
                               ("LEFTPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 7),
                               ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]))
     story += [note, Spacer(1, 8)]
+    labor_note = "" if p.get("volunteer") else ", counted as one person's labor"
     story.append(_p(
-        f"How this is estimated: hand painting uses a crew of {p['crew']} at ${p['wage']:,.2f}/hour and about "
+        ("How this is estimated: painted by volunteers, so labor isn't counted as a cost (only paint). Hand "
+         f"painting uses a crew of {p['crew']} and about " if p.get("volunteer") else
+         f"How this is estimated: hand painting uses a crew of {p['crew']} at ${p['wage']:,.2f}/hour and about ") +
         f"{p['paint_mult']:g}x the robot's paint at ${p['manual_paint_price']:,.2f}/gallon. Robot time is total time "
-        f"on site per field, counted as one person's labor, with TMR white concentrate at "
+        f"on site per field{labor_note}, with TMR white concentrate at "
         f"${p['robot_paint_price']:,.2f} per sprayable gallon. Robot times and paint use come from TMR field data; "
         f"hand-painting times are typical re-marking estimates. First-time layouts by hand take much longer. "
         f"Actual results depend on your fields and crew.", 7.5, MUTED))
