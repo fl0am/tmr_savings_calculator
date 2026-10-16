@@ -1,0 +1,102 @@
+# Savings calculator defaults. Change numbers here (no code changes needed), commit, and the app updates.
+# "estimate" = Claude's starting guess. Replace with real TMR numbers when you have them.
+
+[labor]
+hourly_wage = 22.0          # grounds crew wage, $/hour (estimate)
+manual_crew = 2             # people on a manual painting crew (estimate)
+season_months = 9           # months a year the robot is used, for the PAYS 1-hour monthly minimum (estimate)
+
+[paint]
+robot_price_per_gal = 8.75      # TMR white concentrate per sprayable gallon (Paint & Pricing sheet)
+manual_price_per_gal = 12.00    # what prospects pay per gallon today (estimate)
+manual_paint_multiplier = 1.5   # manual painting uses this many times the robot's paint (estimate, conservative)
+
+[frequency]
+# How often a field gets painted -> markings per week of the season. "Once a season" is handled separately.
+"Twice a week" = 2.0
+"Weekly" = 1.0
+"Every 2 weeks" = 0.5
+"Monthly" = 0.25
+"Once a season" = 0.0
+
+[pays]
+install_fee = 1995              # one-time PAYS installation fee (PAYS sheet)
+
+[models.ProX]
+label = "TinyLineMarker Pro X"
+purchase_price = 0              # LIST PRICE: fill in. 0 hides payback until a rep types a price.
+pays_rate = 350                 # $ per spray hour (PAYS sheet)
+time_factor = 1.0               # robot times below are Pro X times
+
+[models.Sport]
+label = "TinyLineMarker Sport"
+purchase_price = 0              # LIST PRICE: fill in
+pays_rate = 250                 # $ per spray hour (PAYS sheet)
+time_factor = 1.28              # Sport marks an 11v11 soccer field in ~25 min vs 19.5 for Pro X (TMR website)
+
+# Robot numbers: PAYS sheet (spray minutes, total minutes, gallons per field).
+# manual_hours: hours for a crew to re-mark one field by hand (estimate; soccer and football
+# follow TMR's public "2 hours" and "20 crew-hours" figures).
+# how_often / season_weeks: the defaults shown for each field type (estimates).
+[[sports]]
+name = "Soccer 11v11"
+robot_spray_min = 12.0
+robot_total_min = 19.5
+robot_gallons = 1.19
+manual_hours = 2.0
+how_often = "Weekly"
+season_weeks = 30
+
+[[sports]]
+name = "Soccer 7v7 / youth"
+robot_spray_min = 8.8
+robot_total_min = 16.5
+robot_gallons = 0.88
+manual_hours = 1.25
+how_often = "Weekly"
+season_weeks = 30
+
+[[sports]]
+name = "HS Football (with numbers)"
+robot_spray_min = 29.2
+robot_total_min = 260.0
+robot_gallons = 2.9
+manual_hours = 10.0
+how_often = "Weekly"
+season_weeks = 14
+
+[[sports]]
+name = "HS Football (no numbers)"
+robot_spray_min = 27.0
+robot_total_min = 143.6
+robot_gallons = 2.68
+manual_hours = 6.0
+how_often = "Weekly"
+season_weeks = 14
+
+[[sports]]
+name = "Lacrosse (unified)"
+robot_spray_min = 16.7
+robot_total_min = 26.7
+robot_gallons = 1.67
+manual_hours = 2.5
+how_often = "Weekly"
+season_weeks = 14
+
+[[sports]]
+name = "Baseball / Softball"
+robot_spray_min = 3.3
+robot_total_min = 6.6
+robot_gallons = 0.33
+manual_hours = 0.75
+how_often = "Twice a week"
+season_weeks = 16
+
+[[sports]]
+name = "Discus / throwing sector"
+robot_spray_min = 4.0
+robot_total_min = 6.7
+robot_gallons = 0.4
+manual_hours = 0.5
+how_often = "Every 2 weeks"
+season_weeks = 12
