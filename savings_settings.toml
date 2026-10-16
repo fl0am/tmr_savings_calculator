@@ -16,13 +16,13 @@ install_fee = 1995              # one-time PAYS installation fee (PAYS sheet)
 
 [models.ProX]
 label = "TinyLineMarker Pro X"
-purchase_price = 0              # LIST PRICE: fill in. 0 hides payback until a rep types a price.
+purchase_price = 37750              # LIST PRICE: fill in. 0 hides payback until a rep types a price.
 pays_rate = 350                 # $ per spray hour (PAYS sheet)
 time_factor = 1.0               # robot times below are Pro X times
 
 [models.Sport]
 label = "TinyLineMarker Sport"
-purchase_price = 0              # LIST PRICE: fill in
+purchase_price = 21750              # LIST PRICE: fill in
 pays_rate = 250                 # $ per spray hour (PAYS sheet)
 time_factor = 1.28              # Sport marks an 11v11 soccer field in ~25 min vs 19.5 for Pro X (TMR website)
 
